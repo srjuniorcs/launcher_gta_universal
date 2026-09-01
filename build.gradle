@@ -20,7 +20,8 @@ allprojects {
     repositories {
         mavenCentral()
         maven { url 'https://jitpack.io' }
-        maven { url 'https://mint.splunk.com/gradle/'}
+        // PRDownloader 0.6.0 is hosted in Verve's public Maven repository.
+        maven { url 'https://verve.jfrog.io/artifactory/verve-gradle-release/' }
         maven { url "https://oss.sonatype.org/content/repositories/snapshots/" }
         google()
         jcenter()
