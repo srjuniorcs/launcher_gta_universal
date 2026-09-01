@@ -52,8 +52,8 @@ public class MainActivity extends FragmentActivity {
     }
     private static final String SERVER_IP = "51.222.193.109";
     private static final int SERVER_PORT = 7777;
-    private static final String DATA_PAGE_URL = "https://www.mediafire.com/file/462u64oylkt5eqz/Data_Sem_Mods_Samp_Alyn_Todas_Gpus.zip/file";
-    private static final int DATA_VERSION = 2;
+    private static final String DATA_PAGE_URL = "https://www.mediafire.com/file/53kdfsnlrpt8b13/Data.Sem.Mods.Samp.Alyn.Todas.Gpus.zip/file";
+    private static final int DATA_VERSION = 3;
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private SharedPreferences prefs;
     private TextView serverStatusText, playersText, gameStatusText, detailText, progressText;
