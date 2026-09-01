@@ -1,0 +1,23 @@
+GTA SGNT RJ v1.0.0 - TESTE UNIVERSAL
+
+Base: SAMP-Mobile GTA-2.10.
+Arquiteturas configuradas: armeabi-v7a (32 bits) + arm64-v8a (64 bits).
+Servidor fixo: 51.222.193.109:7777.
+
+ALTERACOES SGNT:
+- Corrigido main.cpp que ignorava settings.ini e conectava em IP hardcoded 94.23.168.153:2305.
+- Agora o cliente nativo usa host/port do settings.ini.
+- Launcher SGNT e jogo ficam no MESMO APK/pacote: nao existe instalacao de um segundo APK.
+- Tela SGNT com nick, status do servidor, jogadores online, DATA e botao JOGAR.
+- DATA baixa automaticamente pelo link MediaFire configurado e extrai para a pasta privada do proprio app.
+- Versao mantida em 1.0.0.
+- Workflow GitHub verifica no APK final libGTASA.so e libsamp.so em ARM32 e ARM64.
+
+COMO GERAR:
+1. Copie TODO o conteudo desta pasta para o repositorio launcher_gta substituindo os arquivos.
+2. GitHub Desktop -> Commit -> Push origin.
+3. GitHub -> Actions -> "Build GTA SGNT RJ Universal 1.0.0".
+4. Ao ficar verde, baixe o artifact GTA-SGNT-RJ-1.0.0-UNIVERSAL.
+
+IMPORTANTE:
+Este e um primeiro build de integracao da nova source 32/64. O workflow confirma que as bibliotecas das duas arquiteturas entraram no APK. O teste real em aparelhos 32 e 64 bits ainda e necessario para validar hooks/offsets, DATA e VOIP em cada Android/GPU.
