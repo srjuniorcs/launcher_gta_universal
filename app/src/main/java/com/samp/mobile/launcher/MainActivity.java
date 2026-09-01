@@ -1,6 +1,11 @@
 package com.samp.mobile.launcher;
 
 import android.app.Activity;
+import android.view.inputmethod.InputMethodManager;
+import android.content.Context;
+import androidx.fragment.app.FragmentActivity;
+import com.samp.mobile.launcher.util.SAMPServerInfo;
+import java.util.ArrayList;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
@@ -29,7 +34,22 @@ import java.util.regex.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-public class MainActivity extends Activity {
+public class MainActivity extends FragmentActivity {
+    // Compatibilidade com classes legadas do launcher original.
+    // O SGNT nao usa navegador de servidores, mas essas classes ainda sao compiladas pelo Gradle.
+    private final ArrayList<SAMPServerInfo> legacyServerList = new ArrayList<>();
+    private final ArrayList<SAMPServerInfo> legacyFavoriteServerList = new ArrayList<>();
+
+    public ArrayList<SAMPServerInfo> getServerList() { return legacyServerList; }
+    public ArrayList<SAMPServerInfo> getFavoriteServerList() { return legacyFavoriteServerList; }
+    public void refreshFavoriteServers() { /* nao usado no launcher SGNT */ }
+    public void hideKeyboard(Activity activity) {
+        if (activity == null) return;
+        View view = activity.getCurrentFocus();
+        if (view == null) view = new View(activity);
+        InputMethodManager imm = (InputMethodManager) activity.getSystemService(Context.INPUT_METHOD_SERVICE);
+        if (imm != null) imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
+    }
     private static final String SERVER_IP = "51.222.193.109";
     private static final int SERVER_PORT = 7777;
     private static final String DATA_PAGE_URL = "https://www.mediafire.com/file/462u64oylkt5eqz/Data_Sem_Mods_Samp_Alyn_Todas_Gpus.zip/file";
