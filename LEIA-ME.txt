@@ -1,17 +1,1 @@
-GTA SGNT RJ UNIVERSAL 1.0.0 - PATCH PRDownloader
-
-Erro corrigido:
-Could not resolve com.github.amitshekhariitbhu:PRDownloader:1.0.1
-UnknownHostException: mint.splunk.com
-
-Alteracoes:
-1) Remove o repositorio morto mint.splunk.com.
-2) Adiciona o repositorio publico Verve/JFrog.
-3) Troca PRDownloader 1.0.1 pelo artefato original compativel:
-   com.mindorks.android:prdownloader:0.6.0
-
-COMO APLICAR:
-- Copie build.gradle para a raiz do repositorio e substitua.
-- Copie app/build.gradle para a pasta app e substitua.
-- Commit e Push no GitHub Desktop.
-- O Actions sera executado novamente.
+Patch Linux case-sensitive: RGBA.h -> rgba.h, playerTabList.h -> playertablist.h, voice_new RakNet -> raknet.
