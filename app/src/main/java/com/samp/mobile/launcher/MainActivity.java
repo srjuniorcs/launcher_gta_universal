@@ -105,16 +105,71 @@ public class MainActivity extends FragmentActivity {
         if(isDataReady()) play(); else prepareData();
     }
     private String validNick(){String n=nickInput.getText().toString().trim(); if(!n.matches("[A-Za-z0-9_]{3,24}")){Toast.makeText(this,"Use um nick de 3 a 24 caracteres (letras, números e _).",Toast.LENGTH_LONG).show();return null;}return n;}
-    private void play(){String n=validNick();if(n==null)return;writeSettings(n); startActivity(new Intent(this,SAMP.class));}
+    private void play(){
+        String n=validNick(); if(n==null)return;
+        try { normalizeDataLayout(); } catch(Exception ignored) {}
+        File root=getExternalFilesDir(null);
+        if(!hasCoreData(root)){
+            gameStatusText.setText("DATA INCOMPLETA");
+            gameStatusText.setTextColor(0xFFFF5252);
+            detailText.setText("A DATA foi baixada, mas a estrutura não está correta. Toque em PREPARAR JOGO para corrigir.");
+            actionButton.setText("PREPARAR JOGO");
+            prefs.edit().putInt("data_version",0).apply();
+            return;
+        }
+        writeSettings(n);
+        startActivity(new Intent(this,SAMP.class));
+    }
 
     private void ensureSettings(){ File f=new File(getExternalFilesDir(null),"SAMP/settings.ini"); if(!f.exists()){f.getParentFile().mkdirs(); writeSettings(prefs.getString("nickname","Junior_SGNT"));}}
     private void writeSettings(String nick){ try{File f=new File(getExternalFilesDir(null),"SAMP/settings.ini"); f.getParentFile().mkdirs(); if(!f.exists()){try(InputStream in=getAssets().open("settings.ini");OutputStream out=new FileOutputStream(f)){byte[]b=new byte[8192];int n;while((n=in.read(b))>0)out.write(b,0,n);}} Wini w=new Wini(f); w.put("client","host",SERVER_IP);w.put("client","port",SERVER_PORT);w.put("client","name",nick);w.put("debug","online",true);w.store();}catch(Exception e){Toast.makeText(this,"Falha ao salvar configuração: "+e.getMessage(),Toast.LENGTH_LONG).show();}}
 
-    private boolean isDataReady(){ if(prefs.getInt("data_version",0)!=DATA_VERSION)return false; File root=getExternalFilesDir(null); return new File(root,"texdb/gta3").exists() || new File(root,"files/texdb/gta3").exists() || dirSize(root)>150L*1024*1024; }
+    private boolean isDataReady(){
+        if(prefs.getInt("data_version",0)!=DATA_VERSION)return false;
+        try { normalizeDataLayout(); } catch(Exception ignored) {}
+        return hasCoreData(getExternalFilesDir(null));
+    }
+    private boolean hasCoreData(File root){
+        return root!=null && new File(root,"texdb/gta3").exists();
+    }
+    private void normalizeDataLayout() throws IOException {
+        File root=getExternalFilesDir(null); if(root==null)return;
+        if(hasCoreData(root))return;
+        File found=findDataRoot(root,0);
+        if(found==null || found.equals(root))return;
+        File[] children=found.listFiles(); if(children==null)return;
+        for(File child:children) mergeMove(child,new File(root,child.getName()));
+    }
+    private File findDataRoot(File dir,int depth){
+        if(dir==null||!dir.isDirectory()||depth>4)return null;
+        if(new File(dir,"texdb/gta3").exists())return dir;
+        File[] list=dir.listFiles(); if(list==null)return null;
+        for(File f:list){
+            if(!f.isDirectory())continue;
+            String n=f.getName();
+            if("SAMP".equalsIgnoreCase(n)||"texdb".equalsIgnoreCase(n)||"data".equalsIgnoreCase(n)||"Text".equalsIgnoreCase(n)||"Textures".equalsIgnoreCase(n))continue;
+            File r=findDataRoot(f,depth+1); if(r!=null)return r;
+        }
+        return null;
+    }
+    private void mergeMove(File src,File dst) throws IOException {
+        if(src.isDirectory()){
+            if(!dst.exists()&&!dst.mkdirs())throw new IOException("Falha ao organizar DATA: "+dst.getName());
+            File[] list=src.listFiles(); if(list!=null)for(File f:list)mergeMove(f,new File(dst,f.getName()));
+            src.delete();
+        }else{
+            File parent=dst.getParentFile(); if(parent!=null)parent.mkdirs();
+            if(dst.exists()&&!dst.delete())throw new IOException("Falha ao substituir "+dst.getName());
+            if(!src.renameTo(dst)){
+                try(InputStream in=new BufferedInputStream(new FileInputStream(src));OutputStream out=new BufferedOutputStream(new FileOutputStream(dst))){byte[]b=new byte[65536];int n;while((n=in.read(b))>0)out.write(b,0,n);}
+                if(!src.delete())src.deleteOnExit();
+            }
+        }
+    }
     private long dirSize(File f){if(f==null||!f.exists())return 0;if(f.isFile())return f.length();long s=0;File[]a=f.listFiles();if(a!=null)for(File x:a)s+=dirSize(x);return s;}
     private void refreshGameState(){boolean ok=isDataReady(); if(ok){gameStatusText.setText("PRONTO PARA JOGAR");gameStatusText.setTextColor(0xFF4CAF50);detailText.setText("✓ DATA INSTALADA COM SUCESSO\n✓ CLIENTE ARM32 + ARM64 INTEGRADO");detailText.setTextColor(0xFF4CAF50);actionButton.setText("JOGAR");actionButton.setEnabled(true);}else{gameStatusText.setText("NÃO PRONTO");gameStatusText.setTextColor(0xFFFFC107);detailText.setText("DATA ainda não instalada. Toque em PREPARAR JOGO.");detailText.setTextColor(0xFFAAAAAA);actionButton.setText("PREPARAR JOGO");actionButton.setEnabled(true);} hideProgress();}
 
-    private void prepareData(){preparing=true; actionButton.setEnabled(false);gameStatusText.setText("BAIXANDO DATA...");gameStatusText.setTextColor(0xFFFFC107);detailText.setText("Aguarde. O download e a extração são automáticos.");showProgress("Conectando...",0); executor.execute(()->{File zip=new File(getCacheDir(),"sgnt_data.zip");try{download(DATA_DIRECT_URL,zip);runOnUiThread(()->{gameStatusText.setText("EXTRAINDO DATA...");showProgress("Extraindo arquivos...",0);});extractSmart(zip,getExternalFilesDir(null));zip.delete();prefs.edit().putInt("data_version",DATA_VERSION).apply();runOnUiThread(()->{preparing=false;refreshGameState();Toast.makeText(this,"DATA instalada com sucesso!",Toast.LENGTH_LONG).show();});}catch(Exception e){runOnUiThread(()->{preparing=false;gameStatusText.setText("FALHA NA PREPARAÇÃO");gameStatusText.setTextColor(0xFFFF5252);detailText.setText(e.getMessage()==null?"Erro desconhecido":e.getMessage());actionButton.setText("TENTAR NOVAMENTE");actionButton.setEnabled(true);hideProgress();});}});}
+    private void prepareData(){preparing=true; actionButton.setEnabled(false);gameStatusText.setText("BAIXANDO DATA...");gameStatusText.setTextColor(0xFFFFC107);detailText.setText("Aguarde. O download e a extração são automáticos.");showProgress("Conectando...",0); executor.execute(()->{File zip=new File(getCacheDir(),"sgnt_data.zip");try{download(DATA_DIRECT_URL,zip);runOnUiThread(()->{gameStatusText.setText("EXTRAINDO DATA...");showProgress("Extraindo arquivos...",0);});extractSmart(zip,getExternalFilesDir(null));normalizeDataLayout();if(!hasCoreData(getExternalFilesDir(null)))throw new IOException("DATA extraída, mas a pasta texdb/gta3 não foi encontrada.");zip.delete();prefs.edit().putInt("data_version",DATA_VERSION).apply();runOnUiThread(()->{preparing=false;refreshGameState();Toast.makeText(this,"DATA instalada com sucesso!",Toast.LENGTH_LONG).show();});}catch(Exception e){runOnUiThread(()->{preparing=false;gameStatusText.setText("FALHA NA PREPARAÇÃO");gameStatusText.setTextColor(0xFFFF5252);detailText.setText(e.getMessage()==null?"Erro desconhecido":e.getMessage());actionButton.setText("TENTAR NOVAMENTE");actionButton.setEnabled(true);hideProgress();});}});}
     private byte[] readAll(InputStream in)throws IOException{ByteArrayOutputStream o=new ByteArrayOutputStream();byte[]b=new byte[16384];int n;while((n=in.read(b))>0)o.write(b,0,n);return o.toByteArray();}
     private void download(String u,File out)throws Exception{HttpURLConnection c=(HttpURLConnection)new URL(u).openConnection();c.setInstanceFollowRedirects(true);c.setRequestProperty("User-Agent","GTA-SGNT-RJ-Launcher/1.0.0");c.setRequestProperty("Accept","application/zip,application/octet-stream,*/*");c.setConnectTimeout(30000);c.setReadTimeout(60000);int code=c.getResponseCode();if(code<200||code>=300)throw new IOException("Servidor da DATA respondeu HTTP "+code+".");long total=c.getContentLengthLong(),done=0;if(out.exists())out.delete();try(InputStream in=new BufferedInputStream(c.getInputStream());OutputStream os=new BufferedOutputStream(new FileOutputStream(out))){byte[]b=new byte[1024*128];int n;long lastUi=0;while((n=in.read(b))!=-1){if(n==0)continue;os.write(b,0,n);done+=n;long now=System.currentTimeMillis();if(now-lastUi>=250){lastUi=now;final long d=done,t=total;runOnUiThread(()->{int p=t>0?(int)Math.min(100,d*100/t):0;String mb=String.format(Locale.US,"%.1f",d/1048576.0);String tm=t>0?String.format(Locale.US," / %.1f MB",t/1048576.0):" MB";showProgress("Baixando DATA... "+p+"%  ("+mb+tm+")",p);});}}}if(done<1024*1024)throw new IOException("A DATA baixada é inválida ou está incompleta.");}
     private void extractSmart(File zip,File dest)throws Exception{String canonical=dest.getCanonicalPath()+File.separator;try(ZipInputStream zin=new ZipInputStream(new BufferedInputStream(new FileInputStream(zip)))){ZipEntry e;int count=0;while((e=zin.getNextEntry())!=null){String name=e.getName().replace('\\','/');name=stripKnownRoot(name);if(name.length()==0){zin.closeEntry();continue;}File out=new File(dest,name);if(!out.getCanonicalPath().startsWith(canonical))throw new IOException("ZIP inválido.");if(e.isDirectory())out.mkdirs();else{File p=out.getParentFile();if(p!=null)p.mkdirs();try(OutputStream os=new BufferedOutputStream(new FileOutputStream(out))){byte[]b=new byte[65536];int n;while((n=zin.read(b))>0)os.write(b,0,n);}}count++;final int cc=count;if(cc%100==0)runOnUiThread(()->showProgress("Extraindo arquivos... "+cc,Math.min(99,cc/20)));zin.closeEntry();}}}

@@ -1416,6 +1416,18 @@ stFile* NvFOpen(const char* r0, const char* r1, int r2, int r3)
 
     FILE *f  = fopen(path, "rb");
 
+    // SGNT: se um arquivo customizado do SAMP não existir na DATA,
+    // tenta o arquivo original solicitado pelo GTA. Isso evita crash
+    // durante o carregamento com pacotes de DATA que não trazem todos
+    // os arquivos customizados do cliente GTA 2.10.
+    if(!f)
+    {
+        char originalPath[255]{};
+        sprintf(originalPath, "%s%s", g_pszStorage, r1);
+        f = fopen(originalPath, "rb");
+        if(f) FLog("Fallback original: %s", originalPath);
+    }
+
     if(f)
     {
         st->isFileExist = true;
